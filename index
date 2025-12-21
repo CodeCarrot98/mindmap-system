@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mindmap System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- D3.js -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Top Toolbar -->
+  <header class="toolbar">
+    <div class="logo">🧠 Mindmap</div>
+
+    <div class="actions">
+      <button id="newMapBtn">New</button>
+      <button id="exportBtn">Export</button>
+      <label class="import-label">
+        Import
+        <input type="file" id="importInput" accept=".json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="container">
+
+    <!-- Canvas -->
+    <div id="canvas">
+      <svg id="mindmapSvg"></svg>
+    </div>
+
+    <!-- Side Panel -->
+    <aside class="panel">
+      <h3>Node Editor</h3>
+
+      <label>
+        Title
+        <input type="text" id="nodeTitle" />
+      </label>
+
+      <label>
+        Description
+        <textarea id="nodeDescription" rows="5"></textarea>
+      </label>
+
+      <div class="panel-actions">
+        <button id="addChildBtn">➕ Add Child</button>
+        <button id="deleteNodeBtn" class="danger">🗑 Delete</button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- App Scripts -->
+  <script src="sample-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
