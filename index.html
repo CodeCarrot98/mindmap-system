@@ -13,13 +13,16 @@
 </head>
 <body>
 
-  <!-- Top Toolbar -->
+  <!-- Toolbar -->
   <header class="toolbar">
     <div class="logo">🧠 Mindmap</div>
 
     <div class="actions">
       <button id="newMapBtn">New</button>
+      <button id="expandAllBtn">Expand All</button>
+      <button id="collapseAllBtn">Collapse All</button>
       <button id="exportBtn">Export</button>
+
       <label class="import-label">
         Import
         <input type="file" id="importInput" accept=".json" hidden />
@@ -57,7 +60,7 @@
 
   </div>
 
-  <!-- App Scripts -->
+  <!-- Scripts -->
   <script src="sample-data.js"></script>
   <script src="storage.js"></script>
   <script src="app.js"></script>
