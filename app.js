@@ -8,6 +8,8 @@ let selectedNode = null;
 const width = window.innerWidth;
 const height = window.innerHeight - 48;
 
+const DURATION = 400; // animation duration (ms)
+
 /* ===============================
    SVG & D3 Setup
 ================================ */
@@ -36,9 +38,7 @@ async function init() {
   const saved = await loadMindMap();
   mindMapState = saved || getFreshSampleMindMap();
 
-  // Start collapsed except root
   collapseAll(mindMapState.root);
-
   render();
   wireUI();
 }
@@ -46,12 +46,10 @@ async function init() {
 init();
 
 /* ===============================
-   Rendering
+   Rendering with Animation
 ================================ */
 
 function render() {
-  g.selectAll("*").remove();
-
   const root = d3.hierarchy(
     mindMapState.root,
     d => d.children
@@ -59,24 +57,56 @@ function render() {
 
   treeLayout(root);
 
-  // Links
-  g.selectAll(".link")
-    .data(root.links())
-    .enter()
+  /* ---------- LINKS ---------- */
+
+  const link = g.selectAll(".link")
+    .data(root.links(), d => d.target.data.id);
+
+  link.exit()
+    .transition()
+    .duration(DURATION)
+    .style("opacity", 0)
+    .remove();
+
+  link.enter()
     .append("path")
     .attr("class", "link")
+    .attr("opacity", 0)
     .attr("d", d3.linkHorizontal()
-      .x(d => d.y)
-      .y(d => d.x)
+      .x(d => d.source.y)
+      .y(d => d.source.x)
+    )
+    .merge(link)
+    .transition()
+    .duration(DURATION)
+    .ease(d3.easeCubicInOut)
+    .attr("opacity", 1)
+    .attr("d", d3.linkHorizontal()
+      .x(d => d.target.y)
+      .y(d => d.target.x)
     );
 
-  // Nodes
+  /* ---------- NODES ---------- */
+
   const node = g.selectAll(".node")
-    .data(root.descendants(), d => d.data.id)
-    .enter()
+    .data(root.descendants(), d => d.data.id);
+
+  const nodeExit = node.exit();
+
+  nodeExit.select("rect")
+    .transition()
+    .duration(DURATION)
+    .attr("opacity", 0);
+
+  nodeExit.transition()
+    .duration(DURATION)
+    .remove();
+
+  const nodeEnter = node.enter()
     .append("g")
     .attr("class", "node")
-    .attr("transform", d => `translate(${d.y},${d.x})`)
+    .attr("transform", d => `translate(${d.parent ? d.parent.y : 0},${d.parent ? d.parent.x : 0})`)
+    .attr("opacity", 0)
     .on("click", (event, d) => {
       event.stopPropagation();
       toggleNode(d);
@@ -85,23 +115,30 @@ function render() {
       render();
     });
 
-  node.append("rect")
+  nodeEnter.append("rect")
     .attr("width", 160)
     .attr("height", 46)
     .attr("x", -80)
     .attr("y", -23);
 
-  node.append("text")
+  nodeEnter.append("text")
     .attr("class", "title")
     .attr("text-anchor", "middle")
     .attr("dy", "-2")
     .text(d => d.data.title);
 
-  node.append("text")
+  nodeEnter.append("text")
     .attr("class", "description")
     .attr("text-anchor", "middle")
     .attr("dy", "12")
     .text(d => truncate(d.data.description));
+
+  nodeEnter.merge(node)
+    .transition()
+    .duration(DURATION)
+    .ease(d3.easeCubicInOut)
+    .attr("opacity", 1)
+    .attr("transform", d => `translate(${d.y},${d.x})`);
 }
 
 /* ===============================
@@ -110,7 +147,6 @@ function render() {
 
 function selectNode(d) {
   selectedNode = d;
-
   document.getElementById("nodeTitle").value = d.data.title;
   document.getElementById("nodeDescription").value = d.data.description || "";
 }
@@ -172,10 +208,9 @@ function wireUI() {
   document.getElementById("importInput").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const data = await importMindMap(file);
-    mindMapState = data;
-    render();
+    mindMapState = await importMindMap(file);
     scheduleAutosave(mindMapState);
+    render();
   });
 
   document.getElementById("collapseAllBtn").addEventListener("click", () => {
@@ -184,58 +219,4 @@ function wireUI() {
     render();
   });
 
-  document.getElementById("expandAllBtn").addEventListener("click", () => {
-    expandAll(mindMapState.root);
-    scheduleAutosave(mindMapState);
-    render();
-  });
-}
-
-/* ===============================
-   Helpers
-================================ */
-
-function toggleNode(d) {
-  if (d.data.children) {
-    d.data._children = d.data.children;
-    d.data.children = null;
-  } else if (d.data._children) {
-    d.data.children = d.data._children;
-    d.data._children = null;
-  }
-}
-
-function collapseAll(node) {
-  if (!node.children) return;
-  node._children = node.children;
-  node._children.forEach(collapseAll);
-  node.children = null;
-}
-
-function expandAll(node) {
-  if (node._children) {
-    node.children = node._children;
-    node._children = null;
-  }
-  if (node.children) {
-    node.children.forEach(expandAll);
-  }
-}
-
-function removeNode(parent, id) {
-  if (!parent.children) return false;
-  const index = parent.children.findIndex(c => c.id === id);
-  if (index !== -1) {
-    parent.children.splice(index, 1);
-    return true;
-  }
-  return parent.children.some(c => removeNode(c, id));
-}
-
-function generateId() {
-  return "node_" + Math.random().toString(36).substr(2, 9);
-}
-
-function truncate(text = "") {
-  return text.length > 30 ? text.substring(0, 30) + "…" : text;
-}
+  document.ge
