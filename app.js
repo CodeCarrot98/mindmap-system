@@ -8,7 +8,7 @@ let selectedNode = null;
 const width = window.innerWidth;
 const height = window.innerHeight - 48;
 
-const DURATION = 400; // animation duration (ms)
+const DURATION = 800; // animation duration (ms)
 
 /* ===============================
    SVG & D3 Setup
