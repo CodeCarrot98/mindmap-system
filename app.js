@@ -35,6 +35,10 @@ const treeLayout = d3.tree().nodeSize([80, 220]);
 async function init() {
   const saved = await loadMindMap();
   mindMapState = saved || getFreshSampleMindMap();
+
+  // Start collapsed except root
+  collapseAll(mindMapState.root);
+
   render();
   wireUI();
 }
@@ -48,7 +52,11 @@ init();
 function render() {
   g.selectAll("*").remove();
 
-  const root = d3.hierarchy(mindMapState.root);
+  const root = d3.hierarchy(
+    mindMapState.root,
+    d => d.children
+  );
+
   treeLayout(root);
 
   // Links
@@ -71,7 +79,10 @@ function render() {
     .attr("transform", d => `translate(${d.y},${d.x})`)
     .on("click", (event, d) => {
       event.stopPropagation();
+      toggleNode(d);
       selectNode(d);
+      scheduleAutosave(mindMapState);
+      render();
     });
 
   node.append("rect")
@@ -91,18 +102,14 @@ function render() {
     .attr("text-anchor", "middle")
     .attr("dy", "12")
     .text(d => truncate(d.data.description));
-
 }
 
 /* ===============================
-   Node Selection & Editing
+   Selection
 ================================ */
 
 function selectNode(d) {
   selectedNode = d;
-
-  d3.selectAll(".node").classed("selected", false);
-  d3.select(d3.event?.currentTarget).classed("selected", true);
 
   document.getElementById("nodeTitle").value = d.data.title;
   document.getElementById("nodeDescription").value = d.data.description || "";
@@ -131,6 +138,7 @@ function wireUI() {
   document.getElementById("addChildBtn").addEventListener("click", () => {
     if (!selectedNode) return;
 
+    selectedNode.data.children = selectedNode.data.children || [];
     selectedNode.data.children.push({
       id: generateId(),
       title: "New Node",
@@ -153,6 +161,7 @@ function wireUI() {
   document.getElementById("newMapBtn").addEventListener("click", async () => {
     await clearMindMap();
     mindMapState = getFreshSampleMindMap();
+    collapseAll(mindMapState.root);
     render();
   });
 
@@ -165,22 +174,52 @@ function wireUI() {
     if (!file) return;
     const data = await importMindMap(file);
     mindMapState = data;
-    saveMindMap(mindMapState);
+    render();
+    scheduleAutosave(mindMapState);
+  });
+
+  document.getElementById("collapseAllBtn").addEventListener("click", () => {
+    collapseAll(mindMapState.root);
+    scheduleAutosave(mindMapState);
     render();
   });
 
+  document.getElementById("expandAllBtn").addEventListener("click", () => {
+    expandAll(mindMapState.root);
+    scheduleAutosave(mindMapState);
+    render();
+  });
 }
 
 /* ===============================
    Helpers
 ================================ */
 
-function generateId() {
-  return "node_" + Math.random().toString(36).substr(2, 9);
+function toggleNode(d) {
+  if (d.data.children) {
+    d.data._children = d.data.children;
+    d.data.children = null;
+  } else if (d.data._children) {
+    d.data.children = d.data._children;
+    d.data._children = null;
+  }
 }
 
-function truncate(text = "") {
-  return text.length > 30 ? text.substring(0, 30) + "…" : text;
+function collapseAll(node) {
+  if (!node.children) return;
+  node._children = node.children;
+  node._children.forEach(collapseAll);
+  node.children = null;
+}
+
+function expandAll(node) {
+  if (node._children) {
+    node.children = node._children;
+    node._children = null;
+  }
+  if (node.children) {
+    node.children.forEach(expandAll);
+  }
 }
 
 function removeNode(parent, id) {
@@ -191,4 +230,12 @@ function removeNode(parent, id) {
     return true;
   }
   return parent.children.some(c => removeNode(c, id));
+}
+
+function generateId() {
+  return "node_" + Math.random().toString(36).substr(2, 9);
+}
+
+function truncate(text = "") {
+  return text.length > 30 ? text.substring(0, 30) + "…" : text;
 }
