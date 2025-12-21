@@ -1,0 +1,165 @@
+/* ========== Base Reset ========== */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1f2937;
+  background: #f9fafb;
+}
+
+/* ========== Toolbar ========== */
+.toolbar {
+  height: 48px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.toolbar .logo {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.toolbar .actions button,
+.toolbar .import-label {
+  margin-left: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.toolbar .actions button:hover,
+.toolbar .import-label:hover {
+  background: #e5e7eb;
+}
+
+/* ========== Layout ========== */
+.container {
+  display: flex;
+  height: calc(100% - 48px);
+}
+
+/* ========== Canvas ========== */
+#canvas {
+  flex: 1;
+  background: #f9fafb;
+  overflow: hidden;
+  position: relative;
+}
+
+#mindmapSvg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#mindmapSvg:active {
+  cursor: grabbing;
+}
+
+/* ========== Side Panel ========== */
+.panel {
+  width: 280px;
+  background: #ffffff;
+  border-left: 1px solid #e5e7eb;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel h3 {
+  margin-top: 0;
+  font-size: 14px;
+}
+
+.panel label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.panel input,
+.panel textarea {
+  width: 100%;
+  padding: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+.panel textarea {
+  resize: vertical;
+}
+
+/* ========== Panel Actions ========== */
+.panel-actions {
+  margin-top: auto;
+}
+
+.panel-actions button {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+}
+
+.panel-actions button:hover {
+  background: #e5e7eb;
+}
+
+.panel-actions .danger {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.panel-actions .danger:hover {
+  background: #fecaca;
+}
+
+/* ========== D3 Nodes ========== */
+.node rect {
+  fill: #ffffff;
+  stroke: #d1d5db;
+  stroke-width: 1;
+  rx: 6;
+  ry: 6;
+}
+
+.node.selected rect {
+  stroke: #3b82f6;
+  stroke-width: 2;
+}
+
+.node text.title {
+  font-size: 12px;
+  font-weight: 600;
+  fill: #111827;
+}
+
+.node text.description {
+  font-size: 10px;
+  fill: #6b7280;
+}
+
+/* ========== Links ========== */
+.link {
+  fill: none;
+  stroke: #d1d5db;
+  stroke-width: 1.5;
+}
