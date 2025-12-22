@@ -13,6 +13,7 @@
         <label class="file-label">
             📂 Import JSON <input type="file" id="import" hidden onchange="importJSON(event)">
         </label>
+        <button onclick="centerMap()">🎯 Center View</button>
         <button onclick="resetMap()" class="danger">Reset Map</button>
     </div>
 
@@ -22,19 +23,18 @@
     </div>
 
     <div id="info-icon" onclick="toggleLegend()">⌨️</div>
-    <div id="legend-overlay" class="hidden" onclick="toggleLegend()">
+    <div id="legend-overlay" class="hidden">
         <div class="legend-content">
             <h3>Shortcuts & Controls</h3>
             <ul>
                 <li><span><strong>Shift + Click</strong> Node</span> <span>Add Child</span></li>
                 <li><span><strong>Double Click</strong> Text</span> <span>Rename Node</span></li>
-                <li><span><span>Right Click</span> Node</span> <span>Delete Options</span></li>
+                <li><span><strong>Right Click</strong> Node</span> <span>Delete Options</span></li>
                 <li><span><strong>Click</strong> Node</span> <span>Toggle Details</span></li>
                 <li><span><strong>Drag</strong> Canvas</span> <span>Pan View</span></li>
                 <li><span><strong>Scroll</strong></span> <span>Zoom In/Out</span></li>
             </ul>
-            <button onclick="toggleLegend()" style="margin-top: 20px; width: 100%;">Close</button>
-            
+            <button onclick="toggleLegend()" style="margin-top: 20px; width: 100%; background: #38bdf8; color: #0f172a;">Close</button>
         </div>
     </div>
 
