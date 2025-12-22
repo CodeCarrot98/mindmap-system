@@ -1,4 +1,3 @@
-// Initialize Data
 let rawData = JSON.parse(localStorage.getItem('mindflow_data')) || {
     id: "1", name: "Central Topic", description: "Main idea details...", children: []
 };
@@ -6,10 +5,15 @@ let rawData = JSON.parse(localStorage.getItem('mindflow_data')) || {
 let selectedNode = null;
 const colorScale = d3.scaleSequential(d3.interpolateRainbow).domain([0, 8]);
 
+// Setup Zoom
+const zoom = d3.zoom()
+    .scaleExtent([0.1, 3])
+    .on("zoom", (e) => g.attr("transform", e.transform));
+
 const svg = d3.select("#canvas")
     .attr("width", window.innerWidth).attr("height", window.innerHeight)
-    .call(d3.zoom().scaleExtent([0.3, 3]).on("zoom", (e) => g.attr("transform", e.transform)))
-    .on("dblclick.zoom", null) // Prevent zoom on dblclick
+    .call(zoom)
+    .on("dblclick.zoom", null) // Disable zoom on dblclick for node editing
     .append("g");
 
 const g = svg.append("g");
@@ -19,19 +23,16 @@ function update() {
     const treeLayout = d3.tree().nodeSize([100, 280]); 
     treeLayout(root);
 
-    // Links (Curved Paths)
-    const links = g.selectAll(".link")
-        .data(root.links(), d => d.target.data.id)
-        .join("path")
-        .attr("class", "link")
+    // Curved Links
+    g.selectAll(".link").data(root.links(), d => d.target.data.id)
+        .join("path").attr("class", "link")
         .attr("stroke", d => colorScale(d.source.depth % 8))
         .attr("d", d3.linkHorizontal().x(d => d.y).y(d => d.x));
 
     // Nodes
     const nodes = g.selectAll(".node")
         .data(root.descendants(), d => d.data.id || (d.data.id = Date.now() + Math.random()))
-        .join("g")
-        .attr("class", "node")
+        .join("g").attr("class", "node")
         .attr("transform", d => `translate(${d.y},${d.x})`)
         .on("contextmenu", (e, d) => {
             e.preventDefault();
@@ -42,12 +43,10 @@ function update() {
             menu.classList.remove('hidden');
         });
 
-    // Rounded Rectangles with Dynamic Colors
     nodes.selectAll("rect").remove();
     nodes.append("rect")
         .attr("width", 160).attr("height", 45).attr("x", -80).attr("y", -22)
-        .attr("rx", 12).attr("ry", 12)
-        .attr("fill", d => d3.color(colorScale(d.depth % 8)).darker(1.5))
+        .attr("rx", 12).attr("fill", d => d3.color(colorScale(d.depth % 8)).darker(1.5))
         .attr("stroke", d => colorScale(d.depth % 8))
         .on("click", (e, d) => {
             if (e.shiftKey) {
@@ -63,7 +62,6 @@ function update() {
             }
         });
 
-    // Text & Editing
     nodes.selectAll("text").remove();
     nodes.append("text").attr("text-anchor", "middle").attr("dy", 5).text(d => d.data.name)
         .on("dblclick", (e, d) => {
@@ -71,7 +69,6 @@ function update() {
             if (n) { d.data.name = n; update(); }
         });
 
-    // Collapsible Detail Box
     nodes.selectAll("foreignObject").remove();
     nodes.filter(d => d.data.showDesc).append("foreignObject")
         .attr("x", -80).attr("y", 30).attr("width", 160).attr("height", 80)
@@ -85,16 +82,41 @@ function update() {
     localStorage.setItem('mindflow_data', JSON.stringify(rawData));
 }
 
-// Logic for Deletion
+// Center Map Logic
+function centerMap() {
+    const bounds = g.node().getBBox();
+    const fullWidth = window.innerWidth, fullHeight = window.innerHeight;
+    
+    if (bounds.width === 0) return;
+
+    const scale = 0.8 / Math.max(bounds.width / fullWidth, bounds.height / fullHeight);
+    const midX = bounds.x + bounds.width / 2;
+    const midY = bounds.y + bounds.height / 2;
+
+    d3.select("#canvas").transition().duration(750).call(
+        zoom.transform, 
+        d3.zoomIdentity.translate(fullWidth/2 - scale*midX, fullHeight/2 - scale*midY).scale(scale)
+    );
+}
+
+// UI Handlers
+function toggleLegend() { document.getElementById('legend-overlay').classList.toggle('hidden'); }
+
+window.onclick = (e) => {
+    const legend = document.getElementById('legend-overlay');
+    document.getElementById('context-menu').classList.add('hidden');
+    if (e.target === legend) legend.classList.add('hidden');
+};
+
 function deleteBranch() {
-    if (!selectedNode.parent) return;
+    if (!selectedNode.parent) return alert("Cannot delete root");
     const p = selectedNode.parent.data;
     p.children = p.children.filter(c => c.id !== selectedNode.data.id);
     update();
 }
 
 function deleteSingleNode() {
-    if (!selectedNode.parent) return;
+    if (!selectedNode.parent) return alert("Cannot delete root");
     const p = selectedNode.parent.data;
     const children = selectedNode.data.children || [];
     p.children = p.children.filter(c => c.id !== selectedNode.data.id);
@@ -102,24 +124,6 @@ function deleteSingleNode() {
     update();
 }
 
-// Utility Functions
-function toggleLegend() {
-    const legend = document.getElementById('legend-overlay');
-    legend.classList.toggle('hidden');
-}
-window.onclick = (event) => {
-    const legend = document.getElementById('legend-overlay');
-    const contextMenu = document.getElementById('context-menu');
-
-    // 1. Hide context menu on any click
-    contextMenu.classList.add('hidden');
-
-    // 2. Hide legend ONLY if the user clicks the dark background (the overlay)
-    // and NOT the white box inside it.
-    if (event.target === legend) {
-        legend.classList.add('hidden');
-    }
-};
 function exportJSON() {
     const blob = new Blob([JSON.stringify(rawData, null, 2)], {type: "application/json"});
     const url = URL.createObjectURL(blob);
@@ -129,10 +133,11 @@ function exportJSON() {
 
 function importJSON(e) {
     const reader = new FileReader();
-    reader.onload = (event) => { rawData = JSON.parse(event.target.result); update(); };
+    reader.onload = (event) => { rawData = JSON.parse(event.target.result); update(); centerMap(); };
     reader.readAsText(e.target.files[0]);
 }
 
-function resetMap() { if(confirm("Clear everything?")) { localStorage.clear(); location.reload(); } }
+function resetMap() { if(confirm("Clear map?")) { localStorage.clear(); location.reload(); } }
 
 update();
+centerMap(); // Initial centering
