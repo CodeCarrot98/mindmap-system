@@ -103,9 +103,23 @@ function deleteSingleNode() {
 }
 
 // Utility Functions
-function toggleLegend() { document.getElementById('legend-overlay').classList.toggle('hidden'); }
-window.onclick = () => document.getElementById('context-menu').classList.add('hidden');
+function toggleLegend() {
+    const legend = document.getElementById('legend-overlay');
+    legend.classList.toggle('hidden');
+}
+window.onclick = (event) => {
+    const legend = document.getElementById('legend-overlay');
+    const contextMenu = document.getElementById('context-menu');
 
+    // 1. Hide context menu on any click
+    contextMenu.classList.add('hidden');
+
+    // 2. Hide legend ONLY if the user clicks the dark background (the overlay)
+    // and NOT the white box inside it.
+    if (event.target === legend) {
+        legend.classList.add('hidden');
+    }
+};
 function exportJSON() {
     const blob = new Blob([JSON.stringify(rawData, null, 2)], {type: "application/json"});
     const url = URL.createObjectURL(blob);
