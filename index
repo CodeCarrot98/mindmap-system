@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Mind Map</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: sans-serif; }
+        #root { width: 100vw; height: 100vh; background: #f0f2f5; }
+        .mindmap-node {
+            padding: 12px 20px;
+            background: white;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-width: 120px;
+            text-align: center;
+        }
+        .mindmap-node.selected { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
+        .sidebar {
+            position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
+            background: white; border-left: 1px solid #e5e7eb; padding: 20px;
+            transform: translateX(100%); transition: transform 0.3s ease; z-index: 100;
+        }
+        .sidebar.open { transform: translateX(0); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // --- MOCKING REACT FLOW LOGIC FOR SINGLE FILE ---
+        // Note: For a true GitHub Pages "Single File", we use a simplified SVG rendering 
+        // to mimic the Mind Map behavior without a full Build step.
+
+        const App = () => {
+            const [nodes, setNodes] = useState([
+                { id: '1', label: 'Main Topic', note: '', x: window.innerWidth/2 - 60, y: 100, depth: 0, parentId: null }
+            ]);
+            const [selectedId, setSelectedId] = useState(null);
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+
+            const selectedNode = nodes.find(n => n.id === selectedId);
+
+            // Add Child Logic
+            const addChild = () => {
+                if (!selectedId) return;
+                const parent = nodes.find(n => n.id === selectedId);
+                const newId = Date.now().toString();
+                const newNode = {
+                    id: newId,
+                    label: 'New Idea',
+                    note: '',
+                    x: parent.x + (Math.random() * 200 - 100),
+                    y: parent.y + 150,
+                    depth: parent.depth + 1,
+                    parentId: selectedId
+                };
+                setNodes([...nodes, newNode]);
+            };
+
+            // Smart Delete with Re-parenting
+            const deleteNode = (keepChildren) => {
+                if (!selectedId || selectedId === '1') return;
+                const nodeToDelete = nodes.find(n => n.id === selectedId);
+                const parentId = nodeToDelete.parentId;
+
+                if (keepChildren) {
+                    setNodes(nodes.filter(n => n.id !== selectedId).map(n => {
+                        if (n.parentId === selectedId) return { ...n, parentId: parentId };
+                        return n;
+                    }));
+                } else {
+                    const getIdsToDelete = (id) => {
+                        let ids = [id];
+                        nodes.filter(n => n.parentId === id).forEach(n => {
+                            ids = [...ids, ...getIdsToDelete(n.id)];
+                        });
+                        return ids;
+                    };
+                    const toDelete = getIdsToDelete(selectedId);
+                    setNodes(nodes.filter(n => !toDelete.includes(n.id)));
+                }
+                setSelectedId(null);
+                setSidebarOpen(false);
+            };
+
+            return (
+                <div className="relative w-full h-full overflow-hidden bg-slate-50">
+                    {/* Header Toolbar */}
+                    <div className="absolute top-5 left-5 z-10 flex gap-2">
+                        <button onClick={addChild} className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 transition">
+                            + Add Child
+                        </button>
+                        <button onClick={() => deleteNode(true)} className="bg-orange-500 text-white px-4 py-2 rounded-lg shadow hover:bg-orange-600 transition">
+                            Delete (Keep Children)
+                        </button>
+                        <button onClick={() => deleteNode(false)} className="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 transition">
+                            Delete Branch
+                        </button>
+                    </div>
+
+                    {/* SVG Canvas for Connectors */}
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                        {nodes.map(node => {
+                            const parent = nodes.find(n => n.id === node.parentId);
+                            if (!parent) return null;
+                            return (
+                                <line 
+                                    key={`edge-${node.id}`}
+                                    x1={parent.x + 60} y1={parent.y + 25}
+                                    x2={node.x + 60} y2={node.y + 25}
+                                    stroke="#cbd5e1" strokeWidth="2" strokeDasharray="5,5"
+                                />
+                            );
+                        })}
+                    </svg>
+
+                    {/* Nodes */}
+                    {nodes.map(node => (
+                        <div 
+                            key={node.id}
+                            className={`mindmap-node absolute ${selectedId === node.id ? 'selected' : ''}`}
+                            style={{ left: node.x, top: node.y }}
+                            onClick={() => {
+                                setSelectedId(node.id);
+                                setSidebarOpen(true);
+                            }}
+                        >
+                            {node.label}
+                        </div>
+                    ))}
+
+                    {/* Sidebar Panel */}
+                    <div className={`sidebar ${sidebarOpen ? 'open' : ''} shadow-2xl`}>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold">Node Settings</h2>
+                            <button onClick={() => setSidebarOpen(false)} className="text-gray-500">✕</button>
+                        </div>
+                        
+                        {selectedNode && (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Topic Label</label>
+                                    <input 
+                                        className="mt-1 block w-full border border-gray-300 rounded-md p-2"
+                                        value={selectedNode.label}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setNodes(nodes.map(n => n.id === selectedId ? {...n, label: val} : n));
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Notes</label>
+                                    <textarea 
+                                        className="mt-1 block w-full border border-gray-300 rounded-md p-2 h-40"
+                                        value={selectedNode.note}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setNodes(nodes.map(n => n.id === selectedId ? {...n, note: val} : n));
+                                        }}
+                                        placeholder="Add details here..."
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
