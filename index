@@ -4,73 +4,45 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Mind Map</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
-        body { margin: 0; overflow: hidden; background-color: #f8fafc; font-family: 'Inter', sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #f8fafc; font-family: sans-serif; }
         #root { width: 100vw; height: 100vh; }
-        
         .mindmap-node {
-            padding: 12px 24px;
-            background: white;
-            border-radius: 9999px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            border: 2px solid transparent;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            min-width: 140px;
-            text-align: center;
-            font-weight: 500;
-            color: #1e293b;
-            animation: popIn 0.5s ease-out forwards;
-            opacity: 0;
-            user-select: none;
+            padding: 10px 20px; background: white; border-radius: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: absolute;
+            cursor: pointer; min-width: 120px; text-align: center;
+            border: 2px solid transparent; transition: all 0.2s; z-index: 10;
         }
-
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.8) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        .mindmap-node:hover { transform: scale(1.05); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .mindmap-node.selected { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
-
-        .connector {
-            fill: none;
-            stroke: #cbd5e1;
-            stroke-width: 2;
-            stroke-dasharray: 1000;
-            stroke-dashoffset: 1000;
-            animation: drawLine 1s ease-out forwards;
-        }
-
-        @keyframes drawLine {
-            to { stroke-dashoffset: 0; }
-        }
-
+        .mindmap-node.selected { border-color: #3b82f6; background: #eff6ff; }
+        .connector { fill: none; stroke: #cbd5e1; stroke-width: 2; }
         .sidebar {
-            position: fixed; right: 0; top: 0; bottom: 0; width: 350px;
-            background: white; border-left: 1px solid #e2e8f0; padding: 24px;
-            transform: translateX(100%); transition: transform 0.3s ease;
-            z-index: 50; box-shadow: -10px 0 15px -3px rgba(0,0,0,0.05);
+            position: fixed; right: 0; top: 0; bottom: 0; width: 320px;
+            background: white; border-left: 1px solid #e2e8f0; padding: 20px;
+            transform: translateX(100%); transition: transform 0.3s ease; z-index: 50;
         }
         .sidebar.open { transform: translateX(0); }
-
-        #capture-area { width: 100%; height: 100%; position: relative; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; color: #64748b;">
+            Loading Mind Map...
+        </div>
+    </div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
         const App = () => {
             const [nodes, setNodes] = useState([
-                { id: 'root', label: 'Main Topic', note: '', x: window.innerWidth/2 - 70, y: 100, depth: 0, parentId: null }
+                { id: 'root', label: 'Main Topic', note: '', x: window.innerWidth/2 - 60, y: 50, depth: 0, parentId: null }
             ]);
             const [selectedId, setSelectedId] = useState(null);
             const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -80,15 +52,11 @@
             const addChild = () => {
                 if (!selectedId) return;
                 const parent = nodes.find(n => n.id === selectedId);
-                const newId = 'node-' + Math.random().toString(36).substr(2, 9);
+                const newId = 'n-' + Date.now();
                 const newNode = {
-                    id: newId,
-                    label: 'New Idea',
-                    note: '',
-                    x: parent.x + (Math.random() * 400 - 200),
-                    y: parent.y + 150,
-                    depth: parent.depth + 1,
-                    parentId: selectedId
+                    id: newId, label: 'New Idea', note: '',
+                    x: parent.x + (Math.random() * 200 - 100),
+                    y: parent.y + 120, depth: parent.depth + 1, parentId: selectedId
                 };
                 setNodes([...nodes, newNode]);
             };
@@ -113,77 +81,53 @@
                 setSidebarOpen(false);
             };
 
-            const downloadImage = () => {
-                const element = document.getElementById('capture-area');
-                html2canvas(element).then(canvas => {
-                    const link = document.createElement('a');
-                    link.download = 'mindmap.png';
-                    link.href = canvas.toDataURL();
-                    link.click();
-                });
-            };
-
-            const saveJSON = () => {
-                const data = JSON.stringify(nodes, null, 2);
-                const blob = new Blob([data], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'mindmap.json';
-                link.click();
-            };
-
             return (
-                <div className="h-full w-full relative">
-                    <div className="absolute top-6 left-6 z-20 flex gap-2">
-                        <button onClick={addChild} className="bg-blue-600 text-white px-5 py-2 rounded-full font-medium hover:bg-blue-700 shadow-lg transition">+ Add Child</button>
-                        <button onClick={() => deleteNode(true)} className="bg-white border text-gray-700 px-5 py-2 rounded-full font-medium hover:bg-gray-50 shadow-sm transition">Keep Children</button>
-                        <button onClick={() => deleteNode(false)} className="bg-red-50 text-red-600 px-5 py-2 rounded-full font-medium hover:bg-red-100 transition">Delete Branch</button>
-                        <div className="w-px h-10 bg-gray-200 mx-2"></div>
-                        <button onClick={saveJSON} className="bg-white border text-gray-700 px-5 py-2 rounded-full font-medium hover:bg-gray-50 transition">Save Data</button>
-                        <button onClick={downloadImage} className="bg-emerald-600 text-white px-5 py-2 rounded-full font-medium hover:bg-emerald-700 shadow-lg transition">Export PNG</button>
+                <div className="relative w-full h-full">
+                    <div className="absolute top-4 left-4 z-20 flex gap-2">
+                        <button onClick={addChild} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm shadow hover:bg-blue-700">+ Child</button>
+                        <button onClick={() => deleteNode(true)} className="bg-white border px-4 py-2 rounded-lg text-sm">Delete Only</button>
+                        <button onClick={() => deleteNode(false)} className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm">Delete Branch</button>
                     </div>
 
-                    <div id="capture-area" className="bg-slate-50">
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                            {nodes.map(node => {
-                                const parent = nodes.find(n => n.id === node.parentId);
-                                if (!parent) return null;
-                                const midY = (parent.y + node.y + 50) / 2;
-                                return (
-                                    <path key={node.id} d={`M ${parent.x + 70} ${parent.y + 25} C ${parent.x + 70} ${midY}, ${node.x + 70} ${midY}, ${node.x + 70} ${node.y + 25}`} className="connector" />
-                                );
-                            })}
-                        </svg>
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                        {nodes.map(node => {
+                            const parent = nodes.find(n => n.id === node.parentId);
+                            if (!parent) return null;
+                            return (
+                                <path key={node.id} d={`M ${parent.x + 60} ${parent.y + 20} L ${node.x + 60} ${node.y + 20}`} className="connector" />
+                            );
+                        })}
+                    </svg>
 
-                        {nodes.map(node => (
-                            <div 
-                                key={node.id}
-                                className={`mindmap-node absolute ${selectedId === node.id ? 'selected' : ''}`}
-                                style={{ left: node.x, top: node.y, animationDelay: `${node.depth * 0.15}s` }}
-                                onClick={() => { setSelectedId(node.id); setSidebarOpen(true); }}
-                            >
-                                {node.label}
-                                {node.note && <div className="text-[9px] text-blue-400 mt-1 uppercase font-bold tracking-tighter">View Notes</div>}
-                            </div>
-                        ))}
-                    </div>
+                    {nodes.map(node => (
+                        <div 
+                            key={node.id}
+                            className={`mindmap-node ${selectedId === node.id ? 'selected' : ''}`}
+                            style={{ left: node.x, top: node.y }}
+                            onClick={() => { setSelectedId(node.id); setSidebarOpen(true); }}
+                        >
+                            {node.label}
+                        </div>
+                    ))}
 
-                    <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-                        <div className="flex justify-between items-center mb-10">
-                            <h2 className="text-xl font-bold text-slate-800">Topic Details</h2>
-                            <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+                    <div className={`sidebar ${sidebarOpen ? 'open' : ''} shadow-xl`}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="font-bold">Edit Node</h2>
+                            <button onClick={() => setSidebarOpen(false)}>✕</button>
                         </div>
                         {selectedNode && (
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-400 uppercase">Label</label>
-                                    <input className="w-full mt-2 p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={selectedNode.label} onChange={(e) => setNodes(nodes.map(n => n.id === selectedId ? {...n, label: e.target.value} : n))} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-400 uppercase">Notes</label>
-                                    <textarea className="w-full mt-2 p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 h-80 resize-none" value={selectedNode.note} onChange={(e) => setNodes(nodes.map(n => n.id === selectedId ? {...n, note: e.target.value} : n))} placeholder="Type details here..." />
-                                </div>
+                            <div className="flex flex-col gap-4">
+                                <input 
+                                    className="border p-2 rounded" 
+                                    value={selectedNode.label} 
+                                    onChange={(e) => setNodes(nodes.map(n => n.id === selectedId ? {...n, label: e.target.value} : n))} 
+                                />
+                                <textarea 
+                                    className="border p-2 rounded h-40" 
+                                    placeholder="Notes..."
+                                    value={selectedNode.note} 
+                                    onChange={(e) => setNodes(nodes.map(n => n.id === selectedId ? {...n, note: e.target.value} : n))} 
+                                />
                             </div>
                         )}
                     </div>
